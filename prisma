@@ -1,0 +1,94 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Status {
+  pending
+  approved
+  rejected
+}
+
+enum TransactionType {
+  deposit
+  withdrawal
+}
+
+model User {
+  id                  String         @id @default(uuid())
+  phone_number        String         @unique
+  password_hash       String
+  wallet_balance      Float          @default(0)
+  referral_code       String         @unique
+  referred_by         String?
+  language_preference String         @default("am")
+  created_at          DateTime       @default(now())
+
+  transactions        Transaction[]
+  user_tasks          UserTask[]
+  notifications       Notification[]
+}
+
+model Transaction {
+  id             String          @id @default(uuid())
+  user_id        String
+  type           TransactionType
+  amount         Float
+  receipt_number String?
+  bank_name      String?
+  status         Status          @default(pending)
+  created_at     DateTime        @default(now())
+
+  user           User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id              String     @id @default(uuid())
+  title_am        String
+  title_en        String
+  instructions_am String
+  instructions_en String
+  reward_amount   Float
+  task_url        String
+  is_active       Boolean    @default(true)
+  created_at      DateTime   @default(now())
+
+  user_tasks      UserTask[]
+}
+
+model UserTask {
+  id                  String   @id @default(uuid())
+  user_id             String
+  task_id             String
+  proof_text_or_image String
+  status              Status   @default(pending)
+  submitted_at        DateTime @default(now())
+
+  user                User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  task                Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+}
+
+model Policy {
+  id                   String   @id @default(uuid())
+  title_am             String
+  title_en             String
+  content_am           String
+  content_en           String
+  min_withdrawal_limit Float    @default(100)
+  updated_at           DateTime @updatedAt
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  user_id    String?
+  title      String
+  message    String
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
